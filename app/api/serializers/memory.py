@@ -10,6 +10,7 @@ memory_post_model = api.model('Memory POST model', {
     'total': fields.Integer(required=True, min=0),
     'available': fields.Integer(required=True, min=0),
     'used': fields.Integer(required=True, min=0),
+    'percent': fields.Float(required=True, min=0),
     'free': fields.Integer(required=True, min=0),
     'active': fields.Integer(required=False, min=0),
     'inactive': fields.Integer(required=False, min=0),

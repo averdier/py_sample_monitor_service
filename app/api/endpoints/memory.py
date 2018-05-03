@@ -3,6 +3,7 @@
 from flask import request
 from flask_restplus import Namespace, Resource, abort
 from ..serializers.memory import memory_post_model, memory_model, history_container
+from ..parsers import memory_parser
 from app.extensions import db
 from app.models import MemoryStatus
 
@@ -22,11 +23,39 @@ ns = Namespace('memory', description='Memory related operations.')
 class MemoryCollection(Resource):
 
     @ns.marshal_with(history_container)
+    @ns.expect(memory_parser)
     def get(self):
         """
         Return memory history
         """
-        return {'history': [m for m in MemoryStatus.query.all()]}
+        args = memory_parser.parse_args()
+        if list(args.values()) != [None, None, None]:
+            status_list = []
+            if args.get('device_id'):
+                status_list = MemoryStatus.query.filter_by(device_id=args['device_id'])
+
+            if (args.get('percent') and not args.get('target')) or (args.get('target') and not args.get('percent')):
+                abort(400, error='percent or target missing')
+
+            if args.get('percent') and args['percent'] not in ['over', 'below']:
+                abort(400, error='Unknown direction')
+
+            if args.get('percent') and args.get('device_id'):
+                if args['percent'] == 'over':
+                    status_list = status_list.filter(MemoryStatus.percent >= args['target'])
+                else:
+                    status_list = status_list.filter(MemoryStatus.percent <= args['target'])
+
+            elif not args.get('device_id'):
+                if args['percent'] == 'over':
+                    status_list = MemoryStatus.query.filter(MemoryStatus.percent >= args['target'])
+                else:
+                    status_list = MemoryStatus.query.filter(MemoryStatus.percent <= args['target'])
+
+            return {'history': [m for m in status_list.all()]}
+
+        else:
+            return {'history': [m for m in MemoryStatus.query.all()]}
 
     @ns.marshal_with(memory_model)
     @ns.expect(memory_post_model)
@@ -37,10 +66,11 @@ class MemoryCollection(Resource):
         data = request.json
 
         m = MemoryStatus(
-            device_id=data['device_id'],
+            device_id=data['device_id'].replace(' ', ''),
             timestamp=data['timestamp'],
             total=data['total'],
             available=data['available'],
+            percent=data['percent'],
             used=data['used'],
             free=data['free'],
             active=data.get('active', None),

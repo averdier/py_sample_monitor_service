@@ -11,6 +11,7 @@ class MemoryStatus(db.Model):
     device_id = db.Column(db.String, nullable=False, index=True)
     timestamp = db.Column(db.Integer, nullable=False, index=True)
     total = db.Column(db.Integer, nullable=False)
+    percent = db.Column(db.Float, nullable=False)
     available = db.Column(db.Integer, nullable=False)
     used = db.Column(db.Integer, nullable=False)
     free = db.Column(db.Integer, nullable=False)
